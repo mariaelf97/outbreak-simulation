@@ -82,6 +82,44 @@ def solve_eclipse():
     return c
 
 
+def viral_shedding_simple(new_cases):
+    ans = solve_eclipse()
+    # create an array of zeros the same simze of new cases
+    ww_signal = np.zeros_like(new_cases)
+    # this calculates viral shedding in each day per region
+    for i in range(new_cases.shape[1]):
+        ww_signal[:, i] = np.convolve(new_cases[:, i], ans[::-1], mode='same')
+    return ww_signal
+
+
+def viral_load_matrix(sim):
+    viral_load_matrix = np.zeros((sim['n_days'], sim.n))
+    for t in range(sim['n_days']):
+        vl = cv.utils.compute_viral_load(
+            t,
+            sim.people.date_infectious,
+            sim.people.date_recovered,
+            sim.people.date_dead,
+            sim['viral_dist']['frac_time'],
+            sim['viral_dist']['load_ratio'],
+            sim['viral_dist']['high_cap'],
+        )
+        viral_load_matrix[t, :] = vl  # store full vector
+    return viral_load_matrix
+
+        
+def viral_shedding_covasim(sim):
+    viral_load_matrix = viral_load_matrix(sim)
+    n_days, n_people = viral_load_matrix.shape
+    n_regions = sim.people.region.max() + 1
+    regional_viral_load = np.zeros((n_days, n_regions))
+    for t in range(n_days):
+        for p in range(n_people):
+            r = sim.people.region[p]  # Get the region for this specific person
+            regional_viral_load[t, r] += viral_load_matrix[t, p]
+    return regional_viral_load
+
+
 def main():
     ### STEP 1 ####
     pars = define_sim_parameters(100, "hybrid",
@@ -103,12 +141,10 @@ def main():
     #### STEP 2 ####
     # calculate number of new cases in each region
     new_cases = calculate_new_infections(sim, n_regions)
-    ans = solve_eclipse()
-    # create an array of zeros the same simze of new cases
-    ww_signal = np.zeros_like(new_cases)
-    # this calculates viral shedding in each day per region
-    for i in range(new_cases.shape[1]):
-        ww_signal[:, i] = np.convolve(new_cases[:, i], ans[::-1], mode='same')
+    shedding_simple = viral_shedding_simple(new_cases)
+    shedding_covasim = viral_shedding_covasim(sim)
+    
+
 
 
 if __name__ == "__main__":
