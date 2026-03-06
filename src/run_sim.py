@@ -92,7 +92,7 @@ def viral_shedding_simple(new_cases):
     return ww_signal
 
 
-def viral_load_matrix(sim):
+def calculate_viral_load_matrix(sim):
     viral_load_matrix = np.zeros((sim['n_days'], sim.n))
     for t in range(sim['n_days']):
         vl = cv.utils.compute_viral_load(
@@ -109,7 +109,7 @@ def viral_load_matrix(sim):
 
         
 def viral_shedding_covasim(sim):
-    viral_load_matrix = viral_load_matrix(sim)
+    viral_load_matrix = calculate_viral_load_matrix(sim)
     n_days, n_people = viral_load_matrix.shape
     n_regions = sim.people.region.max() + 1
     regional_viral_load = np.zeros((n_days, n_regions))
@@ -118,6 +118,22 @@ def viral_shedding_covasim(sim):
             r = sim.people.region[p]  # Get the region for this specific person
             regional_viral_load[t, r] += viral_load_matrix[t, p]
     return regional_viral_load
+
+
+def plot_shedding(data,name):
+    fig, ax = plt.subplots(figsize=(6,10))
+    im = ax.imshow(data, aspect='auto', cmap='viridis')
+
+    # Discrete x-axis labels
+    x_labels = ['1', '2', '3', '4']   # replace with your actual category names
+    ax.set_xticks(range(len(x_labels)))
+    ax.set_xticklabels(x_labels)
+
+    ax.set_xlabel("regions")
+    ax.set_ylabel("days")
+
+    fig.colorbar(im, ax=ax, label="viral load")
+    plt.savefig(f'{name}.pdf')
 
 
 def main():
@@ -143,8 +159,9 @@ def main():
     new_cases = calculate_new_infections(sim, n_regions)
     shedding_simple = viral_shedding_simple(new_cases)
     shedding_covasim = viral_shedding_covasim(sim)
-    
-
+    # plot values
+    plot_shedding(shedding_simple,"simple")
+    plot_shedding(shedding_covasim,"covasim")
 
 
 if __name__ == "__main__":
