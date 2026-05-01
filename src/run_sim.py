@@ -7,6 +7,7 @@ from scipy.integrate import odeint
 import epyestim.covid19 as covid19
 import networkx as nx
 from networkx.drawing.nx_pydot import graphviz_layout
+import argparse
 
 def define_sim_parameters(pop_size, pop_type,
                           n_days, location,
@@ -137,27 +138,67 @@ def plot_shedding(data,name):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Define simulation parameters"
+    )
+
+    parser.add_argument("--pop_size", type=int, required=True,
+                        help="Population size")
+
+    parser.add_argument("--pop_type", type=str, required=True,
+                        help="Population type (e.g. random, hybrid, etc.)")
+
+    parser.add_argument("--n_days", type=int, required=True,
+                        help="Number of simulation days")
+
+    parser.add_argument("--location", type=str, required=True,
+                        help="Location name")
+
+    parser.add_argument("--pop_infected", type=int, default=0,
+                        help="Initial infected population (default: 0)")
+    parser.add_argument("--n_imports", type=int, default=0,
+                        help="Number of imported infections (default: 0)")
+    parser.add_argument("--n_rows", type=int, default=2,
+                        help="Number of rows in the region (default: 2)")
+    parser.add_argument("--n_cols", type=int, default=2,
+                        help="Number of columns in the region (default: 2)")
+    parser.add_argument("--n_init_inf", type=int, default=20,
+                        help="Number of initial infections in the region (default: 20)")
+    parser.add_argument("--r_init_inf", type=int, default=0,
+                        help="Row index for where the infection initiated (default: 0)")
+    parser.add_argument("--c_init_inf", type=int, default=0,
+                        help="column index for where the infection initiated (default: 0)")
+
+    args = parser.parse_args()
     ### STEP 1 ####
-    pars = define_sim_parameters(100, "hybrid",
-                                 180, "Zambia",
-                                 0, 0)
-    check_age_household_dist("Zambia")
+    pars = define_sim_parameters(
+        pop_size=args.pop_size,
+        pop_type=args.pop_type,
+        n_days=args.n_days,
+        location=args.location,
+        pop_infected=args.pop_infected,
+        n_imports=args.n_imports,
+    )
+    check_age_household_dist(args.location)
     # initialize the simulation with the parameters
     sim = cv.Sim(pars)
     sim.initialize()
     # Define regions for the simulation
-    n_rows, n_cols = 2, 2
+    n_rows, n_cols = args.n_rows, args.n_cols
     n_regions = n_rows * n_cols
     # Assign people to each region
-    sim = assign_people(sim, n_regions, 180)
+    sim = assign_people(sim, n_regions, args.n_days)
     # initiate infection
     # 20 initial infections in Region_0_0
-    sim = initiate_infection(sim, 0, 0, 20)
+    sim = initiate_infection(sim, args.r_init_inf, args.c_init_inf, args.n_init_inf)
     sim.run()
     #### STEP 2 ####
     # calculate number of new cases in each region
     new_cases = calculate_new_infections(sim, n_regions)
+    # calculate wastewater shedding per region per time point using
+    # basic shedding model
     shedding_simple = viral_shedding_simple(new_cases)
+    # covasim viral load model
     shedding_covasim = viral_shedding_covasim(sim)
     # plot values
     plot_shedding(shedding_simple,"simple")
