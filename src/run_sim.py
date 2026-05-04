@@ -93,24 +93,25 @@ def viral_shedding_simple(new_cases):
     return ww_signal
 
 
-def calculate_viral_load_matrix(sim):
-    viral_load_matrix = np.zeros((sim['n_days'], sim.n))
-    for t in range(sim['n_days']):
-        vl = cv.utils.compute_viral_load(
-            t,
-            sim.people.date_infectious,
-            sim.people.date_recovered,
-            sim.people.date_dead,
-            sim['viral_dist']['frac_time'],
-            sim['viral_dist']['load_ratio'],
-            sim['viral_dist']['high_cap'],
-        )
-        viral_load_matrix[t, :] = vl  # store full vector
-    return viral_load_matrix
+def get_viral_loads(sim, t_start, t_end):
+    # Code credit to https://github.com/amath-idm/covasim_methods_paper/blob/main/figs/viral_load_plot.py
+    viralLoad = np.zeros((len(sim.people.date_exposed),t_end-t_start))
+    par1 = sim.pars['beta_dist']['par1']
+    par2 = sim.pars['beta_dist']['par2']
+    mean  = np.log(par1**2 / np.sqrt(par2 + par1**2)) # Computes the mean of the underlying normal distribution
+    sigma = np.sqrt(np.log(par2/par1**2 + 1)) # Computes sigma for the underlying normal distribution
+    rel_trans = np.random.lognormal(mean=mean, sigma=sigma, size=len(sim.people.date_exposed))
 
-        
-def viral_shedding_covasim(sim):
-    viral_load_matrix = calculate_viral_load_matrix(sim)
+    for i in np.arange(t_end-t_start):
+        viralLoad[:,i] = cv.utils.compute_viral_load(t_start+i, sim.people.date_infectious,\
+                 sim.people.date_recovered, sim.people.date_dead,\
+                 sim.pars['viral_dist']['frac_time'], sim.pars['viral_dist']['load_ratio'],\
+                 sim.pars['viral_dist']['high_cap'])*rel_trans
+    return viralLoad.T
+
+  
+def viral_shedding_covasim(sim,start,end):
+    viral_load_matrix = get_viral_loads(sim,start,end)
     n_days, n_people = viral_load_matrix.shape
     n_regions = sim.people.region.max() + 1
     regional_viral_load = np.zeros((n_days, n_regions))
@@ -198,8 +199,8 @@ def main():
     # calculate wastewater shedding per region per time point using
     # basic shedding model
     shedding_simple = viral_shedding_simple(new_cases)
-    # covasim viral load model
-    shedding_covasim = viral_shedding_covasim(sim)
+    # covasim viral load model (adjust zero if start date is not day 0)
+    shedding_covasim = viral_shedding_covasim(sim,0,args.n_days)
     # plot values
     plot_shedding(shedding_simple,"simple")
     plot_shedding(shedding_covasim,"covasim")
