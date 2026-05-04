@@ -6,7 +6,7 @@
 
 ### Installation
 
-`pip install covasim`
+`pip install -r requirements.txt`
 
 ### Simulation
 Code : `src/run_sim.py`
