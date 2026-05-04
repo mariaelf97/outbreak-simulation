@@ -1,7 +1,6 @@
 import math
 import random
 
-from .constants import NUCLEOTIDES
 from .substitution_model import SubstitutionModel
 
 
@@ -23,7 +22,6 @@ def molecular_clock_evolve(
     rate: float,
     model: SubstitutionModel,
     rng: random.Random,
-    alphabet: tuple = NUCLEOTIDES,
 ) -> str:
     """
     Evolve a sequence along a branch of length ``branch_time``.
@@ -39,6 +37,6 @@ def molecular_clock_evolve(
     for i, nt in enumerate(out):
         n_events = poisson(rng, lam)
         for _ in range(n_events):
-            nt = model.substitute_nucleotide(nt, rng, alphabet=alphabet)
+            nt = model.substitute_nucleotide(nt, rng)
         out[i] = nt
     return "".join(out)

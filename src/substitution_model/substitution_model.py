@@ -8,7 +8,6 @@ from .constants import NUCLEOTIDES
 class SubstitutionModel:
     name: str
     matrix: np.ndarray
-    alphabet: tuple = NUCLEOTIDES
 
     def __init__(self, name, matrix):
         self.name = name
@@ -29,13 +28,11 @@ class SubstitutionModel:
         self,
         ref_nt: str,
         rng: random.Random,
-        alphabet: tuple | None = None,
     ) -> str:
         """Sample the child nucleotide from this model's row for ``ref_nt``."""
-        letters = self.alphabet if alphabet is None else alphabet
-        idx = letters.index(ref_nt)
+        idx = NUCLEOTIDES.index(ref_nt)
         row = self.matrix[idx]
-        return rng.choices(letters, weights=row, k=1)[0]
+        return rng.choices(NUCLEOTIDES, weights=row, k=1)[0]
 
 
 class JukesCantor(SubstitutionModel):
