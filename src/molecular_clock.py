@@ -1,7 +1,7 @@
 import math
 import random
 
-from .substitution_model import SubstitutionModel
+from substitution_model import SubstitutionModel
 
 
 def poisson(rng: random.Random, lam: float) -> int:
