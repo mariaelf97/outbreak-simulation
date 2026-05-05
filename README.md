@@ -1,49 +1,183 @@
+# Covasim Simulation Project
 
+## Overview
 
+This project uses **Covasim** to simulate the spread of COVID-19 within a defined region and estimate viral shedding into wastewater. The region is modeled as a grid (default: 2×2), allowing infections and viral load to be tracked spatially over time.
 
+---
 
-## Covasim 
+## Installation
 
-### Installation
+Install Covasim via pip:
 
-`pip install -r requirements.txt`
-
-### Simulation
-Code : `src/run_sim.py`
-The goal here is to simulate an Covid-19 outbreak in a defined region and calculate the viral shedding rates into wastewater. Here we describe a case where the region is a rectangle with 4 sub-regions. 2 rows and 2 columns. Let's break this down into pieaces.
-
-1. We start with defining parameters for the simulation. These include `pop_size`,`pop_type`,`location`, `n_days`, `pop_infected` and `n_imports`. There are other parameters available for simulation through covasim that can be directly added to `define_sim_parameters()` function as well. For more explanation on what each of these parameters mean, please visit https://docs.idmod.org/projects/covasim/en/latest/tutorials/tut_intro.html
-
-The following are the list of all available parameters for the simulation:
-
-```
-  --pop_size POP_SIZE   Population size
-  --pop_type POP_TYPE   Population type (e.g. random, hybrid, etc.)
-  --n_days N_DAYS       Number of simulation days
-  --location LOCATION   Location name
-  --pop_infected POP_INFECTED
-                        Initial infected population (default: 0)
-  --n_imports N_IMPORTS
-                        Number of imported infections (default: 0)
-  --n_rows N_ROWS       Number of rows in the region (default: 2)
-  --n_cols N_COLS       Number of columns in the region (default: 2)
-  --n_init_inf N_INIT_INF
-                        Number of initial infections in the region (default: 20)
-  --r_init_inf R_INIT_INF
-                        Row index for where the infection initiated (default: 0)
-  --c_init_inf C_INIT_INF
-                        column index for where the infection initiated (default: 0)
+```bash
+pip install covasim
 ```
 
-Please note that covasim by default include each country's age distribution and household size. That is the reason for including the name of the country as a parameter. Function `check_age_household_dist()` checks whether the user input country has available data so if you get an error from this function, it indicates that you either have a typo in the name or the data is not available for that geolocation.
+---
 
-2. Once the parameters are set, the code will try to assign each individual to a random region.
-This is done by function `assign_people()`, we use numpy's random shuffle function to ensure the assignment is random. Depending on the number of rows and columns you pass for your region, you will have differing number of regions. This function returns an array of length N where N is number of people and the values will be 0-X where X is Total number of defined regions.
-3. We then initiate number of N number of infections in one of the regions using `--n_init_inf N_INIT_INF`,`--r_init_inf R_INIT_INF` and `--r_init_inf R_INIT_INF`. You define the region by its row and column indices. Please note that we started with 0 `--pop_infected` infected individual and 0 `n_imports`(average daily number of imported cases).
-4. We then run the simulation, and calculate number of people infected in each region in each time point based on the parameters we passed earlier. Briefly, the function `calculate_new_infections()` first start with finding when each individual becomes infected and then use that information plus where each people is assigned to to create an array of total number of infected people in each region and each time point.
-4. The code will calculate the viral shedding for each region and time point using two different methods, simple and using the viral loads calculated internally in covasim.
-### viral shedding using "Eclipse phase" model
-This model is a naive model that assumes all individuals, regardless of their age and other model parameters. The parameters for the viral shedding function is assigned as previously described(here).
+## Project Structure
 
+* `src/run_sim.py` — Main script for running the simulation
+* `src/plots` — Viral loads visualized in a heatmaps for example test cases.
 
+---
+## How to run the code
 
+```python
+python src/run_sim.py --pop_size 100 --pop_type hybrid --n_days 180 --location zambia
+```
+
+## Simulation Workflow
+
+The simulation consists of several key steps:
+
+### 1. Define Simulation Parameters
+
+Simulation parameters are configured in the `define_sim_parameters()` function.
+
+Core parameters include:
+
+* `pop_size` — Total population size
+* `pop_type` — Population structure (e.g., random, hybrid)
+* `location` — Country/region name (used for demographic data)
+* `n_days` — Number of simulation days
+* `pop_infected` — Initial number of infected individuals
+* `n_imports` — Daily number of imported infections
+
+Additional spatial parameters:
+
+* `n_rows` — Number of rows in the region grid (default: 2)
+* `n_cols` — Number of columns in the region grid (default: 2)
+
+Infection initialization parameters:
+
+* `n_init_inf` — Number of initial infections in a region
+* `r_init_inf` — Row index of initial infections
+* `c_init_inf` — Column index of initial infections
+
+Full parameter list:
+
+```python
+python src/run_sim.py --help
+
+--pop_size POP_SIZE
+--pop_type POP_TYPE
+--n_days N_DAYS
+--location LOCATION
+--pop_infected POP_INFECTED
+--n_imports N_IMPORTS
+--n_rows N_ROWS
+--n_cols N_COLS
+--n_init_inf N_INIT_INF
+--r_init_inf R_INIT_INF
+--c_init_inf C_INIT_INF
+```
+
+**Note:**
+Covasim automatically includes demographic data (age distribution and household sizes) based on the specified location.
+
+* The function `check_age_household_dist()` validates whether data exists for the given location.
+* Errors from this function typically indicate:
+
+  * A typo in the location name, or
+  * Missing data for that region
+
+For more details on Covasim parameters, refer to:
+[Covasim toturial](https://docs.idmod.org/projects/covasim/en/latest/tutorials/tut_intro.html)
+
+---
+
+### 2. Assign Individuals to Regions
+
+The function `assign_people()` randomly assigns individuals to regions in the grid.
+
+* Uses NumPy’s shuffle for randomness
+* Returns an array of length `N` (population size)
+* Each value represents a region ID (0 to total_regions − 1)
+
+---
+
+### 3. Initialize Infections
+
+Initial infections are seeded using:
+
+* `n_init_inf`
+* `r_init_inf`
+* `c_init_inf`
+
+These define:
+
+* How many individuals are infected
+* The specific region (by row and column) where infections begin
+
+By default:
+
+* `pop_infected = 0`
+* `n_imports = 0`
+
+---
+
+### 4. Run Simulation & Track Infections
+
+The simulation is executed to track infections over time.
+
+The function `calculate_new_infections()`:
+
+1. Determines when each individual becomes infected
+2. Maps individuals to regions
+3. Aggregates infection counts per:
+
+   * Region
+   * Time step
+
+---
+
+### 5. Viral Shedding Estimation
+
+Viral shedding is computed for each region over time using two approaches:
+
+---
+
+#### A. Eclipse Phase Model (Simplified)
+
+A basic model that assumes:
+
+* Uniform viral shedding behavior across individuals
+* No variation due to age or other characteristics
+
+This model provides a simplified estimate based on predefined shedding parameters.
+
+---
+
+#### B. Covasim-Based Viral Load
+
+Covasim internally calculates viral load per individual at each time step.
+
+This project leverages that data to compute shedding:
+
+* `get_viral_loads(sim, t_start, t_end)`
+* `viral_shedding_covasim(sim, start, end)`
+
+Method:
+
+* Extract per-individual viral loads
+* Sum loads across individuals within each region
+* Aggregate over time
+
+Reference implementation:
+[Covasim original paper](https://github.com/amath-idm/covasim_methods_paper/blob/main/figs/viral_load_plot.py)
+
+---
+
+## Summary
+
+This pipeline:
+
+1. Configures a population and spatial grid
+2. Simulates infection spread using Covasim
+3. Tracks infections by region and time
+4. Estimates wastewater viral shedding using:
+
+   * A simplified model
+   * Covasim’s internal viral load calculations
